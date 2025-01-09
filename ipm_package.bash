@@ -38,7 +38,18 @@ echo "+ version=$version"
 
 # zip needed files
 tar czf v$version.tar.gz hdl/ef_util_lib.v fw
-
+# get checksum
 shasum -a 256 v$version.tar.gz > v$version.tar.gz.sha256
 
 # create tag
+git tag -a EF_IP_UTIL-v$version -m "Release version $version"
+git push origin EF_IP_UTIL-v$version
+
+# create release
+set -x
+if gh release view EF_IP_UTIL-v$version > /dev/null 2>&1; then
+    echo "Release EF_IP_UTIL-v$version already exists. Skipping..."
+else
+    echo "Creating release EF_IP_UTIL-v$version..."
+    gh release create EF_IP_UTIL-v$version v$version.tar.gz -t "EF_IP_UTIL-v$version" --notes "sha256: $(cat v$version.tar.gz.sha256)"
+fi
