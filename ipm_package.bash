@@ -36,7 +36,9 @@ done
 
 echo "+ version=$version"
 
+# zip needed files
 tar czf v$version.tar.gz hdl/ef_util_lib.v fw
 
 shasum -a 256 v$version.tar.gz > v$version.tar.gz.sha256
 
+# create tag
