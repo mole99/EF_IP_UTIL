@@ -460,19 +460,19 @@ module ef_util_gating_cell(
     input   wire    clk_en,
     output  wire    clk_o
 );
-    `ifdef SKY130
+    `ifdef CLKG_SKY130_HD
     (* keep *) sky130_fd_sc_hd__dlclkp_4 clk_gate(
     `ifdef USE_POWER_PINS 
         .VPWR(vpwr), 
         .VGND(vgnd), 
         .VNB(vpwr),
 		.VPB(vgnd),
-    `endif // USE_POWER_PINS
+    `endif // CLKG_SKY130_HD
         .GCLK(clk_o), 
         .GATE(clk_en), 
         .CLK(clk)
         );
-    `else // SKY130
+    `else // CLKG_SKY130_HD
     assign clk_o = clk & clk_en; 
-    `endif // SKY130
+    `endif // CLKG_SKY130_HD
 endmodule
