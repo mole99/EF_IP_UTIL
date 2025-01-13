@@ -269,93 +269,6 @@ module ef_util_fifo #(parameter DW=8, AW=4)(
   
 endmodule
 
-module ef_util_sar_ctrl #(parameter SIZE = 8) ( 
-    input   wire                clk,        // The clock
-    input   wire                rst_n,      // Active high reset
-    input   wire                soc,        // Start of Conversion
-    input   wire                cmp,        // Analog comparator output
-    input   wire                en,         // Enable the controller
-    input   wire [3:0]          swidth,     // Number of clock cycles for sampling
-    output  wire                sample_n,   // Sample_n/Hold
-    output  wire [SIZE-1:0]     data,       // The output sample
-    output  wire                eoc,        // End of Conversion
-    output  wire                dac_rst     // reset the DAC capacitive array (optional)
-);
-	
-	reg [SIZE-1:0]  result;
-	reg [SIZE-1:0]  shift;
-    reg [3:0]       sample_ctr;
-    wire            sample_ctr_match = (swidth == sample_ctr);
-	
-    // FSM to handle the SAR operation
-    // Idle -> Cap array reset (1) -> Sample (swidth) -> Convert (SIZE) -> Done (1)
-    reg [2:0]   state, nstate;
-	localparam [2:0]    IDLE    = 3'd0, 
-	                    SAMPLE  = 3'd1, 
-	                    CONV    = 3'd2, 
-	                    DONE    = 3'd3,
-                        RST     = 3'd7;
-
-	always @*
-        case (state)
-            IDLE    :   if(soc) nstate = RST;
-                        else nstate = IDLE;
-            RST     :   nstate = SAMPLE;
-            SAMPLE  :   if(sample_ctr_match) nstate = CONV;
-                        else nstate = SAMPLE;
-            CONV    :   if(shift == 1'b1) nstate = DONE;
-                        else nstate = CONV;
-            DONE    :   nstate = IDLE;
-            default:    nstate = IDLE;
-        endcase
-	  
-	always @(posedge clk or negedge rst_n)
-        if(!rst_n)
-            state <= IDLE;
-        else if(en)
-            state <= nstate;
-
-    // Sample Counter
-    always @(posedge clk or negedge rst_n)
-        if(!rst_n)
-            sample_ctr <= 'b0;
-        else if(en & (state==SAMPLE))
-            if(sample_ctr_match)
-                sample_ctr <= 'b0;
-            else
-                sample_ctr <= sample_ctr + 'b1;
-    
-    // Shift Register
-    always @(posedge clk)
-        if(en)
-            if(state == IDLE) 
-                shift <= 1'b1 << (SIZE-1);
-            else if(state == CONV)
-                shift<= shift >> 1; 
-
-    // The SAR
-    wire [SIZE-1:0] current = (cmp == 1'b0) ? ~shift : {SIZE{1'b1}} ;
-    wire [SIZE-1:0] next = shift >> 1;
-    always @(posedge clk)
-        if(en)
-            if(state == IDLE)
-                result <= 'b0;
-            else if(state == RST) 
-                result <= 1'b1 << (SIZE-1);
-            else if(state == CONV)
-                result <= (result | next) & current; 
-	   
-	assign data = result;
-    
-    assign eoc = (state==DONE);
-
-    assign sample_n = (state != SAMPLE);
-
-
-	assign dac_rst = (state == RST);
-
-endmodule
-
 /*
     Glitch-free 2x1 Clock Multiplexor
     based on the following old EDN article: 
@@ -472,7 +385,9 @@ module ef_util_gating_cell(
         .GATE(clk_en), 
         .CLK(clk)
         );
-    `else // CLKG_SKY130_HD
+    `elsif CLKG_GENERIC
     assign clk_o = clk & clk_en; 
+    `else
+    assign clk_o = clk;
     `endif // CLKG_SKY130_HD
 endmodule
