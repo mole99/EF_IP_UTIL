@@ -369,7 +369,6 @@ module ef_util_gating_cell(
     input   wire    vgnd,
     `endif // USE_POWER_PINS
     input   wire    clk,
-    input   wire    rst_n,
     input   wire    clk_en,
     output  wire    clk_o
 );
@@ -385,6 +384,14 @@ module ef_util_gating_cell(
         .GATE(clk_en), 
         .CLK(clk)
         );
+    `elsif PDK_ihp_sg13g2
+    
+    sg13g2_lgcp_1 clk_gate (
+        .GCLK   (clk_o),
+        .GATE   (clk_en),
+        .CLK    (clk)
+    );
+    
     `elsif CLKG_GENERIC
     assign clk_o = clk & clk_en; 
     `else
